@@ -3,13 +3,14 @@ import os
 
 SQLITE_DB = 'tatts.sqlite'
 
+
 def create_db_schema():
     # Connecting to the database file
     conn = sqlite3.connect(SQLITE_DB)
     c = conn.cursor()
     # Race Table
-    c.execute('CREATE TABLE race (id INTEGER PRIMARY KEY, meeting_code INTEGER, venue_name TEXT,'
-              ' race_no INTEGER, weather TEXT, distance REAL, track TEXT)')
+    c.execute('CREATE TABLE race (race_id TEXT PRIMARY KEY, venue_name TEXT,'
+              ' weather TEXT, distance REAL, track TEXT)')
 
     # Race Tipsters Table
     # Consider adding flag if the tipster made a correct guess or not.
@@ -23,7 +24,8 @@ def create_db_schema():
 
     # Race Results Table
     c.execute('CREATE TABLE race_results (race_id INTEGER, place_no INTEGER, runner_no INTEGER,'
-              ' pool_type TEXT, divid_end REAL, PRIMARY KEY (race_id, place_no, runner_no))')
+              ' pool_type TEXT, divid_end REAL,'
+              ' PRIMARY KEY (race_id, place_no, runner_no, pool_type))')
 
     # Race Pools Table
     c.execute('CREATE TABLE race_pools (race_id INTEGER, pool_type TEXT,'
@@ -31,8 +33,8 @@ def create_db_schema():
 
     # Pool Details Table
     c.execute('CREATE TABLE pool_details (race_id INTEGER, pool_type TEXT, div_amount REAL,'
-              ' leg_no INTEGER, runner_no INTEGER, PRIMARY KEY (race_id, pool_type,'
-              ' leg_no, runner_no))')
+              ' runners_place_list TEXT, PRIMARY KEY (race_id, pool_type,'
+              ' runners_place_list))')
 
     # Committing changes and closing the connection to the database file
     conn.commit()
