@@ -4,11 +4,16 @@ import sqlite3
 from xml.dom.minidom import parseString
 import time
 
+
 def get_racing_info_by_day(day):
     """
     Collect the racing info for specific day
     """
-    year, month, day = datetime.strftime(day, "%Y %-m %-d").split()
+    year, month, day = datetime.strftime(day, "%Y %m %d").split()
+    if int(month) < 10:
+        month = month[1:]
+    if int(day) < 10:
+        day = day[1:]
     # https://tatts.com/pagedata/racing/2015/7/8/RaceDay.xml
     url = "https://tatts.com/pagedata/racing/" + "/".join([year, month, day, "RaceDay.xml"])
     r = requests.get(url)
@@ -35,6 +40,8 @@ def get_racing_info_by_day(day):
                 continue
             race_no = race.getAttribute("RaceNo")
             weather = race.getAttribute("WeatherDesc")
+            distance = race.getAttribute("Distance")
+            track = race.getAttribute("TrackDesc")
             # https://tatts.com/pagedata/racing/2015/7/10/BG1.xml
             race_url = "https://tatts.com/pagedata/racing/" + "/".join([year, month, day,
                                                                         meeting_code +
@@ -44,8 +51,9 @@ def get_racing_info_by_day(day):
             race_dom = parseString(race_data.text[3:])
 
             print "************* Begin Race info ****************"
-            print "Race No \t Venue Name \t Meeting Code \t Weather \t"
-            print "%s \t \t %s \t %s \t \t %s" % (race_no, venue_name, meeting_code, weather)
+            print "Race No \t Venue Name \t Meeting Code \t Weather \t Distance \t Track"
+            print "%s \t \t %s \t %s \t \t %s \t %s \t \t %s" % (race_no, venue_name, meeting_code,
+                                                              weather, distance, track)
 
             tipsters = race_dom.getElementsByTagName("TipsterTip")
             print "-----Tipsters-----"
@@ -63,8 +71,15 @@ def get_racing_info_by_day(day):
                 runner_name = runner.getAttribute("RunnerName")
                 box_no = runner.getAttribute("Box")
                 scratched = runner.getAttribute("Scratched")
-                print "Runner No \t Box No \t Runner Name \t Scratched"
-                print "%s \t \t %s \t \t %s \t %s" % (runner_no, box_no, runner_name, scratched)
+                trainer = runner.getAttribute("Rider")
+                win_price = runner.getElementsByTagName("WinOdds")[0].getAttribute("Odds")
+                place_price = runner.getElementsByTagName("PlaceOdds")[0].getAttribute("Odds")
+                print "Runner No \t Box No \t Runner Name \t Scratched \t Trainer  \t \t "
+                "Win \t Place"
+                print "%s \t \t %s \t \t %s \t %s \t \t %s \t \t %s \t \t %s" % (runner_no, box_no,
+                                                                        runner_name, scratched,
+                                                                        trainer, win_price,
+                                                                        place_price)
 
             result_places = race_dom.getElementsByTagName("ResultPlace")
             for result_place in result_places:
@@ -102,7 +117,7 @@ def get_racing_info_by_day(day):
                         div_result_runner_no = div_result.getAttribute("RunnerNo")
                         print "\t \t Leg No \t Runner No"
                         print "\t \t %s \t \t %s" % (leg_no, div_result_runner_no)
-            time.sleep(2)
+            time.sleep(1)
             print "************* End Race info ****************"
 
 
