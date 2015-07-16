@@ -35,6 +35,10 @@ def tipsters_performance():
     for key, value in FILTERS.iteritems():
         print "%s = %s" % (key, value)
 
+    print 'FILTERS["tipsters_performance"] = ', FILTERS["tipsters_performance"]
+    filters_exist = any([0 if filter_item == "N/A" else 1
+                         for filter_item in FILTERS["tipsters_performance"]])
+    print "filters exist = ", filters_exist
     try:
         conn = sqlite3.connect(SQLITE_DB)
         c = conn.cursor()
@@ -48,8 +52,32 @@ def tipsters_performance():
         sql_stmt += '(select sum(b.div_amount) from race_tipsters a inner join pool_details b on '
         sql_stmt += 'a.race_id = b.race_id where a.won_tf = 1 and'
         sql_stmt += ' a.tipster_name = rt.tipster_name and b.pool_type = "TF")'
-        sql_stmt += ' as sum_winning_payout '
-        sql_stmt += 'from race_tipsters rt Group by rt.tipster_name'
+        sql_stmt += ' as sum_winning_payout'
+        sql_stmt += ' from race_tipsters rt'
+        sql_stmt += " inner join race r on r.race_id = rt.race_id"
+
+        if filters_exist:
+            print "consolidating filters"
+            sql_stmt += " Where 1"
+            if FILTERS["tipsters_performance"]["tipster_name"] != "N/A":
+                sql_stmt += ' and rt.tipster_name = "%s"' % FILTERS["tipsters_performance"]["tipster_name"]
+
+            if FILTERS["tipsters_performance"]["venue"] != "N/A":
+                sql_stmt += ' and r.venue_name = "%s"' % FILTERS["tipsters_performance"]["venue"]
+
+            if FILTERS["tipsters_performance"]["start_date"] != "N/A":
+                sql_stmt += ' and r.date >= "%s"' % FILTERS["tipsters_performance"]["start_date"]
+
+            if FILTERS["tipsters_performance"]["end_date"] != "N/A":
+                sql_stmt += ' and r.date <= "%s"' % FILTERS["tipsters_performance"]["end_date"]
+
+            if FILTERS["tipsters_performance"]["distance_minimum"] != "N/A":
+                sql_stmt += ' and r.distance >= "%s"' % FILTERS["tipsters_performance"]["distance_minimum"]
+
+            if FILTERS["tipsters_performance"]["distance_maximum"] != "N/A":
+                sql_stmt += ' and r.distance <= "%s"' % FILTERS["tipsters_performance"]["distance_maximum"]
+
+        sql_stmt += ' Group by rt.tipster_name'
         print "Executing sql: %s" % sql_stmt
         c.execute(sql_stmt)
 
@@ -101,7 +129,8 @@ def parse_config_update_filters(file_path, section_name):
             for option in config.options(section):
                 print "option = ", option
                 print "option value = ", config.get(section, option)
-                FILTERS[section] = config.get(section, option)
+                if option in FILTERS[section].keys():
+                    FILTERS[section][option] = config.get(section, option)
 
 
 def analyze_it():
