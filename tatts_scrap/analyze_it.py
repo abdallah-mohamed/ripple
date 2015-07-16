@@ -77,6 +77,12 @@ def tipsters_performance():
             if FILTERS["tipsters_performance"]["distance_maximum"] != "N/A":
                 sql_stmt += ' and r.distance <= "%s"' % FILTERS["tipsters_performance"]["distance_maximum"]
 
+            if FILTERS["tipsters_performance"]["number_of_runners"] != "N/A":
+                sql_stmt += ' and r.no_runners = "%s"' % FILTERS["tipsters_performance"]["number_of_runners"]
+
+            if FILTERS["tipsters_performance"]["tf_pool_size"] != "N/A":
+                sql_stmt += ' and r.tf_pool_size <= "%s"' % FILTERS["tipsters_performance"]["tf_pool_size"]
+
         sql_stmt += ' Group by rt.tipster_name'
         print "Executing sql: %s" % sql_stmt
         c.execute(sql_stmt)
@@ -98,15 +104,19 @@ def tipsters_performance():
         for row in rows:
             print row
 
-        write_to_csv_file("tipsters_performance.csv", rows)
+        header = 'tipster_name,number_of_events,num_of_wins,sum_winning_payout,avg_num_wins,'
+        header += 'avg_win_payout,expected_value\n'
+
+        write_to_csv_file("tipsters_performance.csv", header, rows)
 
     finally:
         conn.commit()
         conn.close()
 
 
-def write_to_csv_file(file_path, data):
+def write_to_csv_file(file_path, header, data):
     with open(file_path, 'w') as csv_file:
+        csv_file.write(header)
         for line in data:
             csv_file.write(','.join([str(item) for item in line]))
             csv_file.write('\n')

@@ -7,11 +7,11 @@ from sqlite_db import SQLITE_DB, create_db_schema
 import os
 
 
-def get_save_racing_info_by_day(day, conn):
+def get_save_racing_info_by_day(datetime_stamp, conn):
     """
     Collect the racing info for specific day
     """
-    year, month, day = datetime.strftime(day, "%Y %m %d").split()
+    year, month, day = datetime.strftime(datetime_stamp, "%Y %m %d").split()
     if int(month) < 10:
         month = month[1:]
     if int(day) < 10:
@@ -61,8 +61,9 @@ def get_save_racing_info_by_day(day, conn):
                 continue
 
             # Save race info to db.
-            c.execute('INSERT INTO race VALUES("%s", "%s", "%s", "%s", "%s")' %
-                      (race_id, venue_name, weather, distance, track))
+            c.execute('INSERT INTO race VALUES("%s", "%s", "%s", "%s", "%s", "%s", 0, 0)' %
+                      (race_id, venue_name, weather, distance, track,
+                       datetime.strftime(datetime_stamp, "%Y-%m-%d")))
 
             # https://tatts.com/pagedata/racing/2015/7/10/BG1.xml
             race_url = "https://tatts.com/pagedata/racing/" + "/".join([year, month, day,
@@ -78,11 +79,14 @@ def get_save_racing_info_by_day(day, conn):
                                                               weather, distance, track)
 
             runners = race_dom.getElementsByTagName("Runner")
+            num_of_unscratched_runners = 0
             for runner in runners:
                 runner_no = runner.getAttribute("RunnerNo")
                 runner_name = runner.getAttribute("RunnerName")
                 box_no = runner.getAttribute("Box")
                 scratched = runner.getAttribute("Scratched")
+                if not scratched:
+                    num_of_unscratched_runners += 1
                 trainer = runner.getAttribute("Rider")
                 win_price = runner.getElementsByTagName("WinOdds")[0].getAttribute("Odds")
                 place_price = runner.getElementsByTagName("PlaceOdds")[0].getAttribute("Odds")
@@ -98,6 +102,10 @@ def get_save_racing_info_by_day(day, conn):
                           ' "%s", "%s", "%s")' %
                           (race_id, runner_no, runner_name, box_no, 1 if scratched == 'Y' else 0,
                            trainer, win_price, place_price))
+
+            # Update race info with no_of_runners.
+            c.execute('Update race Set no_runners = "%s" Where race_id = "%s"' %
+                      (num_of_unscratched_runners, race_id))
 
             result_places = race_dom.getElementsByTagName("ResultPlace")
             for result_place in result_places:
@@ -154,6 +162,11 @@ def get_save_racing_info_by_day(day, conn):
                     # Save Race Pool Details to db
                     c.execute('INSERT INTO pool_details VALUES("%s", "%s", "%s", "%s")' %
                               (race_id, pool_type, div_amount, '-'.join(runners_place_list)))
+
+                    # Update race info with terifecta pool size.
+                    c.execute('Update race Set tf_pool_size = "%s" Where race_id = "%s"' %
+                              (len(terifecta_results), race_id))
+
 
             tipsters = race_dom.getElementsByTagName("TipsterTip")
             print "-----Tipsters-----"

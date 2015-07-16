@@ -10,7 +10,8 @@ def create_db_schema():
     c = conn.cursor()
     # Race Table
     c.execute('CREATE TABLE race (race_id TEXT PRIMARY KEY, venue_name TEXT,'
-              ' weather TEXT, distance REAL, track TEXT)')
+              ' weather TEXT, distance REAL, track TEXT, date datetime, no_runners INTEGER,'
+              ' tf_pool_size INTEGER)')
 
     # Race Tipsters Table
     # Consider adding flag if the tipster made a correct guess or not.
