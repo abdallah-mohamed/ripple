@@ -77,19 +77,6 @@ def get_save_racing_info_by_day(day, conn):
             print "%s \t \t %s \t %s \t \t %s \t %s \t \t %s" % (race_no, venue_name, meeting_code,
                                                               weather, distance, track)
 
-            tipsters = race_dom.getElementsByTagName("TipsterTip")
-            print "-----Tipsters-----"
-            for tipster in tipsters:
-                tipster_id = tipster.getAttribute("TipsterId")
-                tipster_tips = tipster.getAttribute("Tips")
-                tipster_name = tipster.getElementsByTagName("Tipster"
-                                                            )[0].getAttribute("TipsterName")
-                print "Tipster Id \t Tipster Tips \t Tipster Name"
-                print "%s \t \t %s \t %s" % (tipster_id, tipster_tips, tipster_name)
-
-                # Save tipsters to db
-                c.execute('INSERT INTO race_tipsters VALUES("%s", "%s", "%s", "%s")' %
-                          (race_id, tipster_id, tipster_name, tipster_tips))
 
             runners = race_dom.getElementsByTagName("Runner")
             for runner in runners:
@@ -138,6 +125,7 @@ def get_save_racing_info_by_day(day, conn):
 
             pools = race_dom.getElementsByTagName("Pool")
             print "---POOLS---"
+            terifecta_results = []
             for pool in pools:
                 pool_type = pool.getAttribute("PoolType")
                 pool_total = pool.getAttribute("PoolTotal")
@@ -161,9 +149,37 @@ def get_save_racing_info_by_day(day, conn):
                         print "\t \t Leg No \t Runner No"
                         print "\t \t %s \t \t %s" % (leg_no, div_result_runner_no)
 
+                if pool_type == "TF":  # Terifecta
+                    terifecta_results = runners_place_list
+
                     # Save Race Pool Details to db
                     c.execute('INSERT INTO pool_details VALUES("%s", "%s", "%s", "%s")' %
                               (race_id, pool_type, div_amount, '-'.join(runners_place_list)))
+
+            tipsters = race_dom.getElementsByTagName("TipsterTip")
+            print "-----Tipsters-----"
+            for tipster in tipsters:
+                tipster_id = tipster.getAttribute("TipsterId")
+                tipster_tips = tipster.getAttribute("Tips")
+                tipster_name = tipster.getElementsByTagName("Tipster"
+                                                            )[0].getAttribute("TipsterName")
+                print "Tipster Id \t Tipster Tips \t Tipster Name"
+                print "%s \t \t %s \t %s" % (tipster_id, tipster_tips, tipster_name)
+
+                tf_candidate = 0
+                won_tf = 0
+                if len(tipster_tips.split('-')) >= 3:
+                    tf_candidate = 1
+
+                    print "Terifecta results = ", terifecta_results
+                    if set(terifecta_results) in set(tipster_tips.strip().split('-')):
+                        won_tf = 1
+
+                    # Save tipsters to db
+                    c.execute('INSERT INTO race_tipsters VALUES("%s", "%s", "%s", "%s",'
+                              ' "%s", "%s")' %
+                              (race_id, tipster_id, tipster_name, tipster_tips,
+                               tf_candidate, won_tf))
 
             print "************* End Race info ****************"
 
