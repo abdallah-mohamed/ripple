@@ -77,7 +77,6 @@ def get_save_racing_info_by_day(day, conn):
             print "%s \t \t %s \t %s \t \t %s \t %s \t \t %s" % (race_no, venue_name, meeting_code,
                                                               weather, distance, track)
 
-
             runners = race_dom.getElementsByTagName("Runner")
             for runner in runners:
                 runner_no = runner.getAttribute("RunnerNo")
@@ -150,7 +149,7 @@ def get_save_racing_info_by_day(day, conn):
                         print "\t \t %s \t \t %s" % (leg_no, div_result_runner_no)
 
                 if pool_type == "TF":  # Terifecta
-                    terifecta_results = runners_place_list
+                    terifecta_results = [item for item in runners_place_list]
 
                     # Save Race Pool Details to db
                     c.execute('INSERT INTO pool_details VALUES("%s", "%s", "%s", "%s")' %
@@ -172,7 +171,8 @@ def get_save_racing_info_by_day(day, conn):
                     tf_candidate = 1
 
                     print "Terifecta results = ", terifecta_results
-                    if set(terifecta_results) in set(tipster_tips.strip().split('-')):
+                    if set(terifecta_results).issubset(set(tipster_tips.strip('*')
+                                                           .strip().split('-'))):
                         won_tf = 1
 
                     # Save tipsters to db

@@ -14,25 +14,26 @@ def create_db_schema():
 
     # Race Tipsters Table
     # Consider adding flag if the tipster made a correct guess or not.
-    c.execute('CREATE TABLE race_tipsters (race_id INTEGER, tipster_id INTEGER,'
-              ' tipster_name TEXT, tipster_tips TEXT, PRIMARY KEY (race_id, tipster_id))')
+    c.execute('CREATE TABLE race_tipsters (race_id TEXT, tipster_id INTEGER,'
+              ' tipster_name TEXT, tipster_tips TEXT, tf_candidate INTEGRE, won_tf INTEGER,'
+              ' PRIMARY KEY (race_id, tipster_id))')
 
     # Race Runners Table
-    c.execute('CREATE TABLE race_runners (race_id INTEGER, runner_no INTEGER, runner_name TEXT,'
+    c.execute('CREATE TABLE race_runners (race_id TEXT, runner_no INTEGER, runner_name TEXT,'
               ' box_no INTEGER, scratched INTEGER, trainer TEXT, win_price REAL,'
               ' place_price REAL, PRIMARY KEY (race_id, runner_no))')
 
     # Race Results Table
-    c.execute('CREATE TABLE race_results (race_id INTEGER, place_no INTEGER, runner_no INTEGER,'
+    c.execute('CREATE TABLE race_results (race_id TEXT, place_no INTEGER, runner_no INTEGER,'
               ' pool_type TEXT, divid_end REAL,'
               ' PRIMARY KEY (race_id, place_no, runner_no, pool_type))')
 
     # Race Pools Table
-    c.execute('CREATE TABLE race_pools (race_id INTEGER, pool_type TEXT,'
+    c.execute('CREATE TABLE race_pools (race_id TEXT, pool_type TEXT,'
               ' pool_total REAL, PRIMARY KEY (race_id, pool_type))')
 
     # Pool Details Table
-    c.execute('CREATE TABLE pool_details (race_id INTEGER, pool_type TEXT, div_amount REAL,'
+    c.execute('CREATE TABLE pool_details (race_id TEXT, pool_type TEXT, div_amount REAL,'
               ' runners_place_list TEXT, PRIMARY KEY (race_id, pool_type,'
               ' runners_place_list))')
 
