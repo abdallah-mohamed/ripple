@@ -1,5 +1,6 @@
 from sqlite_db import SQLITE_DB
 from ConfigParser import ConfigParser
+import sqlite3
 
 TATTS_ANALYSIS_CFG = "tatts_analysis.cfg"
 global FILTERS
@@ -33,6 +34,54 @@ def tipsters_performance():
 
     for key, value in FILTERS.iteritems():
         print "%s = %s" % (key, value)
+
+    try:
+        conn = sqlite3.connect(SQLITE_DB)
+        c = conn.cursor()
+
+        c.execute('Drop view if Exists tipsters_performance')
+
+        sql_stmt = 'CREATE VIEW tipsters_performance AS select rt.tipster_name, '
+        sql_stmt += ' count(rt.race_id) as number_of_events, '
+        sql_stmt += '(select count(won_tf) from race_tipsters where won_tf = 1 and '
+        sql_stmt += 'tipster_name = rt.tipster_name ) as num_of_wins, '
+        sql_stmt += '(select sum(b.div_amount) from race_tipsters a inner join pool_details b on '
+        sql_stmt += 'a.race_id = b.race_id where a.won_tf = 1 and'
+        sql_stmt += ' a.tipster_name = rt.tipster_name and b.pool_type = "TF")'
+        sql_stmt += ' as sum_winning_payout '
+        sql_stmt += 'from race_tipsters rt Group by rt.tipster_name'
+        print "Executing sql: %s" % sql_stmt
+        c.execute(sql_stmt)
+
+        c.execute('Drop view if Exists tipsters_performance_details')
+
+        sql_stmt = 'CREATE VIEW tipsters_performance_details AS select *, '
+        sql_stmt += '(num_of_wins*1.0/number_of_events) as avg_num_wins, '
+        sql_stmt += '(sum_winning_payout/num_of_wins) as avg_win_payout '
+        sql_stmt += 'from tipsters_performance'
+        print "Executing sql: %s" % sql_stmt
+        c.execute(sql_stmt)
+
+        c.execute('select *, '
+                  '((avg_win_payout/avg_num_wins) - 24) as expected_value '
+                  'from tipsters_performance_details')
+
+        rows = c.fetchall()
+        for row in rows:
+            print row
+
+        write_to_csv_file("tipsters_performance.csv", rows)
+
+    finally:
+        conn.commit()
+        conn.close()
+
+
+def write_to_csv_file(file_path, data):
+    with open(file_path, 'w') as csv_file:
+        for line in data:
+            csv_file.write(','.join([str(item) for item in line]))
+            csv_file.write('\n')
 
 
 def winning_box():
