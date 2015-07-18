@@ -45,45 +45,79 @@ def tipsters_performance():
 
         c.execute('Drop view if Exists tipsters_performance')
 
-        sql_stmt = 'CREATE VIEW tipsters_performance AS select rt.tipster_name, '
-        sql_stmt += ' count(rt.race_id) as number_of_events, '
-        sql_stmt += '(select count(won_tf) from race_tipsters where won_tf = 1 and '
-        sql_stmt += 'tipster_name = rt.tipster_name ) as num_of_wins, '
-        sql_stmt += '(select sum(b.div_amount) from race_tipsters a inner join pool_details b on '
-        sql_stmt += 'a.race_id = b.race_id where a.won_tf = 1 and'
-        sql_stmt += ' a.tipster_name = rt.tipster_name and b.pool_type = "TF")'
-        sql_stmt += ' as sum_winning_payout'
-        sql_stmt += ' from race_tipsters rt'
-        sql_stmt += " inner join race r on r.race_id = rt.race_id"
+        sql_stmt_part1 = 'CREATE VIEW tipsters_performance AS select rt.tipster_name, '
+        sql_stmt_part1 += ' count(rt.race_id) as number_of_events, '
+
+        sql_stmt_part1 += ' (select count(rt2.won_tf) from race_tipsters rt2'
+        sql_stmt_part1 += " inner join race r on rt2.race_id = r.race_id"
+        sql_stmt_part1 += ' where rt2.won_tf = 1 and '
+        sql_stmt_part1 += ' rt2.tipster_name = rt.tipster_name'
+
+        sql_stmt_part2 = ' ) as num_of_wins,'
+        sql_stmt_part2 += ' (select sum(b.div_amount) from race_tipsters rt2 inner join pool_details b on '
+        sql_stmt_part2 += ' rt2.race_id = b.race_id'
+        sql_stmt_part2 += " inner join race r on rt2.race_id = r.race_id"
+        sql_stmt_part2 += ' where rt2.won_tf = 1 and'
+        sql_stmt_part2 += ' rt2.tipster_name = rt.tipster_name and b.pool_type = "TF"'
+
+        sql_stmt_part3 = ' ) as sum_winning_payout'
+        sql_stmt_part3 += ' from race_tipsters rt'
+        sql_stmt_part3 += " inner join race r on r.race_id = rt.race_id"
+        sql_stmt_part3 += " Where 1"
 
         if filters_exist:
             print "consolidating filters"
-            sql_stmt += " Where 1"
             if FILTERS["tipsters_performance"]["tipster_name"] != "N/A":
-                sql_stmt += ' and rt.tipster_name = "%s"' % FILTERS["tipsters_performance"]["tipster_name"]
+                added_sql = ' and rt.tipster_name = "%s"' % FILTERS["tipsters_performance"]["tipster_name"]
+                sql_stmt_part1 += added_sql
+                sql_stmt_part2 += added_sql
+                sql_stmt_part3 += added_sql
 
             if FILTERS["tipsters_performance"]["venue"] != "N/A":
-                sql_stmt += ' and r.venue_name = "%s"' % FILTERS["tipsters_performance"]["venue"]
+                added_sql = ' and r.venue_name = "%s"' % FILTERS["tipsters_performance"]["venue"]
+                sql_stmt_part1 += added_sql
+                sql_stmt_part2 += added_sql
+                sql_stmt_part3 += added_sql
 
             if FILTERS["tipsters_performance"]["start_date"] != "N/A":
-                sql_stmt += ' and r.date >= "%s"' % FILTERS["tipsters_performance"]["start_date"]
+                added_sql = ' and r.date >= "%s"' % FILTERS["tipsters_performance"]["start_date"]
+                sql_stmt_part1 += added_sql
+                sql_stmt_part2 += added_sql
+                sql_stmt_part3 += added_sql
 
             if FILTERS["tipsters_performance"]["end_date"] != "N/A":
-                sql_stmt += ' and r.date <= "%s"' % FILTERS["tipsters_performance"]["end_date"]
+                added_sql = ' and r.date <= "%s"' % FILTERS["tipsters_performance"]["end_date"]
+                sql_stmt_part1 += added_sql
+                sql_stmt_part2 += added_sql
+                sql_stmt_part3 += added_sql
 
             if FILTERS["tipsters_performance"]["distance_minimum"] != "N/A":
-                sql_stmt += ' and r.distance >= "%s"' % FILTERS["tipsters_performance"]["distance_minimum"]
+                added_sql = ' and r.distance >= "%s"' % FILTERS["tipsters_performance"]["distance_minimum"]
+                sql_stmt_part1 += added_sql
+                sql_stmt_part2 += added_sql
+                sql_stmt_part3 += added_sql
 
             if FILTERS["tipsters_performance"]["distance_maximum"] != "N/A":
-                sql_stmt += ' and r.distance <= "%s"' % FILTERS["tipsters_performance"]["distance_maximum"]
+                added_sql = ' and r.distance <= "%s"' % FILTERS["tipsters_performance"]["distance_maximum"]
+                sql_stmt_part1 += added_sql
+                sql_stmt_part2 += added_sql
+                sql_stmt_part3 += added_sql
 
             if FILTERS["tipsters_performance"]["number_of_runners"] != "N/A":
-                sql_stmt += ' and r.no_runners = "%s"' % FILTERS["tipsters_performance"]["number_of_runners"]
+                added_sql = ' and r.no_runners = "%s"' % FILTERS["tipsters_performance"]["number_of_runners"]
+                sql_stmt_part1 += added_sql
+                sql_stmt_part2 += added_sql
+                sql_stmt_part3 += added_sql
 
             if FILTERS["tipsters_performance"]["tf_pool_size"] != "N/A":
-                sql_stmt += ' and r.tf_pool_size <= "%s"' % FILTERS["tipsters_performance"]["tf_pool_size"]
+                added_sql = ' and r.tf_pool_size <= "%s"' % FILTERS["tipsters_performance"]["tf_pool_size"]
+                sql_stmt_part1 += added_sql
+                sql_stmt_part2 += added_sql
+                sql_stmt_part3 += added_sql
 
-        sql_stmt += ' Group by rt.tipster_name'
+
+        sql_stmt_part3 += ' Group by rt.tipster_name'
+        sql_stmt = sql_stmt_part1 + sql_stmt_part2 + sql_stmt_part3
         print "Executing sql: %s" % sql_stmt
         c.execute(sql_stmt)
 
