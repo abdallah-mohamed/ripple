@@ -54,7 +54,8 @@ def tipsters_performance():
         sql_stmt_part1 += ' rt2.tipster_name = rt.tipster_name'
 
         sql_stmt_part2 = ' ) as num_of_wins,'
-        sql_stmt_part2 += ' (select sum(b.div_amount) from race_tipsters rt2 inner join pool_details b on '
+        sql_stmt_part2 += ' (select COALESCE(sum(b.div_amount), 0) from race_tipsters rt2'
+        sql_stmt_part2 += ' inner join pool_details b on '
         sql_stmt_part2 += ' rt2.race_id = b.race_id'
         sql_stmt_part2 += " inner join race r on rt2.race_id = r.race_id"
         sql_stmt_part2 += ' where rt2.won_tf = 1 and'
@@ -124,21 +125,23 @@ def tipsters_performance():
         c.execute('Drop view if Exists tipsters_performance_details')
 
         sql_stmt = 'CREATE VIEW tipsters_performance_details AS select *, '
-        sql_stmt += '(num_of_wins*1.0/number_of_events) as avg_num_wins, '
-        sql_stmt += '(sum_winning_payout/num_of_wins) as avg_win_payout '
+        sql_stmt += 'COALESCE((number_of_events*1.0/num_of_wins), 0) as avg_num_races_between_wins, '
+        sql_stmt += 'COALESCE((sum_winning_payout/num_of_wins), 0) as avg_win_payout '
         sql_stmt += 'from tipsters_performance'
         print "Executing sql: %s" % sql_stmt
         c.execute(sql_stmt)
 
-        c.execute('select *, '
-                  '((avg_win_payout/avg_num_wins) - 24) as expected_value '
-                  'from tipsters_performance_details')
+        c.execute('select *,'
+                  ' COALESCE( '
+                  ' (((avg_win_payout - 24)/avg_num_races_between_wins) - 24 * (1 - (1/avg_num_races_between_wins)))'
+                  ' , 0) as expected_value'
+                  ' from tipsters_performance_details')
 
         rows = c.fetchall()
         for row in rows:
             print row
 
-        header = 'tipster_name,number_of_events,num_of_wins,sum_winning_payout,avg_num_wins,'
+        header = 'tipster_name,number_of_events,num_of_wins,sum_winning_payout,avg_num_races_between_wins,'
         header += 'avg_win_payout,expected_value\n'
 
         write_to_csv_file("tipsters_performance.csv", header, rows)
