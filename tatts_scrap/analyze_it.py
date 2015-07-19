@@ -10,7 +10,10 @@ FILTERS = {"tipsters_performance": {"box_number": "N/A", "tipster_name": "N/A",
                                                "start_date": "N/A", "end_date": "N/A",
                                                 "distance_minimum": "N/A",
                                                 "distance_maximum": "N/A",
-                                                "tf_pool_size": "N/A", "number_of_runners": "N/A"}}
+                                                "tf_pool_size": "N/A", "number_of_runners": "N/A"},
+           "winning_box": {"venue": "N/A", "start_date": "N/A", "end_date": "N/A",
+                           "distance_minimum": "N/A", "distance_maximum": "N/A",
+                           "win_pool_size_gt": "N/A", "number_of_runners": "N/A"}}
 
 
 def validate_user_input(user_input):
@@ -160,7 +163,109 @@ def write_to_csv_file(file_path, header, data):
 
 
 def winning_box():
+    global FILTERS
     print "winning box method"
+    parse_config_update_filters(file_path=TATTS_ANALYSIS_CFG, section_name="winning_box")
+
+    for key, value in FILTERS.iteritems():
+        print "%s = %s" % (key, value)
+
+    print 'FILTERS["winning_box"] = ', FILTERS["winning_box"]
+    filters_exist = any([0 if filter_item == "N/A" else 1
+                         for filter_item in FILTERS["winning_box"]])
+    print "filters exist = ", filters_exist
+    try:
+        conn = sqlite3.connect(SQLITE_DB)
+        c = conn.cursor()
+
+        c.execute('Drop view if Exists winning_box')
+
+        sql_stmt_part1 = 'CREATE VIEW winning_box AS select rr.box_no,'
+        sql_stmt_part1 += ' (select count(rr2.race_id) from race_runners rr2'
+        sql_stmt_part1 += ' inner join race r on r.race_id = rr2.race_id'
+        sql_stmt_part1 += ' where rr2.scratched = 0 and rr2.box_no = rr.box_no'
+
+        sql_stmt_part2 = ' group by rr2.box_no) as no_races,'
+        sql_stmt_part2 += ' count(r.race_id) as no_wins,'
+        sql_stmt_part2 += ' sum(rp.pool_total) as win_pool_size'
+        sql_stmt_part2 += ' from race_runners rr'
+        sql_stmt_part2 += ' inner join race_results rs on rr.race_id = rs.race_id and'
+        sql_stmt_part2 += ' rr.runner_no = rs.runner_no'
+        sql_stmt_part2 += ' inner join race_pools rp on rr.race_id = rp.race_id'
+        sql_stmt_part2 += ' inner join race r on rr.race_id = r.race_id'
+        sql_stmt_part2 += ' where  rs.place_no = 1 and rs.pool_type = "WW" and'
+        sql_stmt_part2 += ' rp.pool_type = "WW" and rr.scratched = 0'
+
+        if filters_exist:
+            print "consolidating filters"
+            if FILTERS["winning_box"]["venue"] != "N/A":
+                added_sql = ' and r.venue_name = "%s"' % FILTERS["winning_box"]["venue"]
+                sql_stmt_part1 += added_sql
+                sql_stmt_part2 += added_sql
+
+            if FILTERS["winning_box"]["start_date"] != "N/A":
+                added_sql = ' and r.date >= "%s"' % FILTERS["winning_box"]["start_date"]
+                sql_stmt_part1 += added_sql
+                sql_stmt_part2 += added_sql
+
+            if FILTERS["winning_box"]["end_date"] != "N/A":
+                added_sql = ' and r.date <= "%s"' % FILTERS["winning_box"]["end_date"]
+                sql_stmt_part1 += added_sql
+                sql_stmt_part2 += added_sql
+
+            if FILTERS["winning_box"]["distance_minimum"] != "N/A":
+                added_sql = ' and r.distance >= "%s"' % FILTERS["winning_box"]["distance_minimum"]
+                sql_stmt_part1 += added_sql
+                sql_stmt_part2 += added_sql
+
+            if FILTERS["winning_box"]["distance_maximum"] != "N/A":
+                added_sql = ' and r.distance <= "%s"' % FILTERS["winning_box"]["distance_maximum"]
+                sql_stmt_part1 += added_sql
+                sql_stmt_part2 += added_sql
+
+            if FILTERS["winning_box"]["number_of_runners"] != "N/A":
+                added_sql = ' and r.no_runners = "%s"' % FILTERS["winning_box"]["number_of_runners"]
+                sql_stmt_part1 += added_sql
+                sql_stmt_part2 += added_sql
+
+            if FILTERS["winning_box"]["win_pool_size_gt"] != "N/A":
+                added_sql = ' and rp.win_pool_size >= "%s"' % FILTERS["winning_pool"]["win_pool_size_gt"]
+                sql_stmt_part1 += added_sql
+                sql_stmt_part2 += added_sql
+
+
+        sql_stmt_part2 += ' group by  rr.box_no'
+        sql_stmt = sql_stmt_part1 + sql_stmt_part2
+        print "Executing sql: %s" % sql_stmt
+        c.execute(sql_stmt)
+
+        c.execute('Drop view if Exists winning_box_details')
+
+        sql_stmt = 'CREATE VIEW winning_box_details AS select *, '
+        sql_stmt += ' (no_races*1.0/no_wins) as avg_num_races_between_wins,'
+        sql_stmt += ' (win_pool_size*1.0/no_wins) avg_win_payout'
+        sql_stmt += ' from winning_box'
+        print "Executing sql: %s" % sql_stmt
+        c.execute(sql_stmt)
+
+        c.execute('select *,'
+                  ' COALESCE( '
+                  ' (((avg_win_payout - 24)/avg_num_races_between_wins) - 24 * (1 - (1/avg_num_races_between_wins)))'
+                  ' , 0) as expected_value'
+                  ' from winning_box_details')
+
+        rows = c.fetchall()
+        for row in rows:
+            print row
+
+        header = 'box_no,no_races,no_wins,total_payout,avg_num_races_between_wins,'
+        header += 'avg_win_payout,expected_value\n'
+
+        write_to_csv_file("winning_box.csv", header, rows)
+
+    finally:
+        conn.commit()
+        conn.close()
 
 
 def parse_config_update_filters(file_path, section_name):

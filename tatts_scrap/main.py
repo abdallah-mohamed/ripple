@@ -85,7 +85,7 @@ def get_save_racing_info_by_day(datetime_stamp, conn):
                 runner_name = runner.getAttribute("RunnerName")
                 box_no = runner.getAttribute("Box")
                 scratched = runner.getAttribute("Scratched")
-                if not scratched:
+                if scratched == 'N':
                     num_of_unscratched_runners += 1
                 trainer = runner.getAttribute("Rider")
                 win_price = runner.getElementsByTagName("WinOdds")[0].getAttribute("Odds")
