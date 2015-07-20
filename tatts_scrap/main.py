@@ -61,7 +61,7 @@ def get_save_racing_info_by_day(datetime_stamp, conn):
                 continue
 
             # Save race info to db.
-            c.execute('INSERT INTO race VALUES("%s", "%s", "%s", "%s", "%s", "%s", 0, 0)' %
+            c.execute('INSERT INTO race VALUES("%s", "%s", "%s", "%s", "%s", "%s", 0, 0, 0)' %
                       (race_id, venue_name, weather, distance, track,
                        datetime.strftime(datetime_stamp, "%Y-%m-%d")))
 
@@ -144,6 +144,11 @@ def get_save_racing_info_by_day(datetime_stamp, conn):
                 c.execute('INSERT INTO race_pools VALUES("%s", "%s", "%s")' %
                           (race_id, pool_type, pool_total))
 
+                if pool_type == "TF":
+                    # Update race info with terifecta pool size.
+                    c.execute('Update race Set tf_pool_size = "%s" Where race_id = "%s"' %
+                              (pool_total, race_id))
+
                 for divid_end in divid_ends:
                     div_amount = divid_end.getAttribute("DivAmount")
                     print "\t Div amount = %s" % div_amount
@@ -164,7 +169,7 @@ def get_save_racing_info_by_day(datetime_stamp, conn):
                               (race_id, pool_type, div_amount, '-'.join(runners_place_list)))
 
                     # Update race info with terifecta pool size.
-                    c.execute('Update race Set tf_pool_size = "%s" Where race_id = "%s"' %
+                    c.execute('Update race Set no_tf_winners = "%s" Where race_id = "%s"' %
                               (len(terifecta_results), race_id))
 
 

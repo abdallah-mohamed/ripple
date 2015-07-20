@@ -10,7 +10,7 @@ FILTERS = {"tipsters_performance": {"box_number": "N/A", "tipster_name": "N/A",
                                                "start_date": "N/A", "end_date": "N/A",
                                                 "distance_minimum": "N/A",
                                                 "distance_maximum": "N/A",
-                                                "tf_pool_size": "N/A", "number_of_runners": "N/A"},
+                                                "tf_pool_size_gt": "N/A", "number_of_runners": "N/A"},
            "winning_box": {"venue": "N/A", "start_date": "N/A", "end_date": "N/A",
                            "distance_minimum": "N/A", "distance_maximum": "N/A",
                            "win_pool_size_gt": "N/A", "number_of_runners": "N/A"}}
@@ -53,6 +53,7 @@ def tipsters_performance():
 
         sql_stmt_part1 += ' (select count(rt2.won_tf) from race_tipsters rt2'
         sql_stmt_part1 += " inner join race r on rt2.race_id = r.race_id"
+
         sql_stmt_part1 += ' where rt2.won_tf = 1 and '
         sql_stmt_part1 += ' rt2.tipster_name = rt.tipster_name'
 
@@ -113,8 +114,8 @@ def tipsters_performance():
                 sql_stmt_part2 += added_sql
                 sql_stmt_part3 += added_sql
 
-            if FILTERS["tipsters_performance"]["tf_pool_size"] != "N/A":
-                added_sql = ' and r.tf_pool_size <= "%s"' % FILTERS["tipsters_performance"]["tf_pool_size"]
+            if FILTERS["tipsters_performance"]["tf_pool_size_gt"] != "N/A":
+                added_sql = ' and r.tf_pool_size >= "%s"' % FILTERS["tipsters_performance"]["tf_pool_size_gt"]
                 sql_stmt_part1 += added_sql
                 sql_stmt_part2 += added_sql
                 sql_stmt_part3 += added_sql
@@ -144,7 +145,18 @@ def tipsters_performance():
         for row in rows:
             print row
 
-        header = 'tipster_name,number_of_events,num_of_wins,sum_winning_payout,avg_num_races_between_wins,'
+        keys = ""
+        values = ""
+        for key, value in sorted(FILTERS["tipsters_performance"].iteritems()):
+            print "tp (%s, %s)" %(key, value)
+            keys += key + ","
+            values += value + ","
+
+        keys = keys[:-1] + "\n"
+        values = values[:-1] + "\n"
+        header = keys + values
+
+        header += 'tipster_name,number_of_events,num_of_wins,sum_winning_payout,avg_num_races_between_wins,'
         header += 'avg_win_payout,expected_value\n'
 
         write_to_csv_file("tipsters_performance.csv", header, rows)
@@ -187,7 +199,7 @@ def winning_box():
 
         sql_stmt_part2 = ' group by rr2.box_no) as no_races,'
         sql_stmt_part2 += ' count(r.race_id) as no_wins,'
-        sql_stmt_part2 += ' sum(rp.pool_total) as win_pool_size'
+        sql_stmt_part2 += ' sum(rs.divid_end) as win_pool_size'
         sql_stmt_part2 += ' from race_runners rr'
         sql_stmt_part2 += ' inner join race_results rs on rr.race_id = rs.race_id and'
         sql_stmt_part2 += ' rr.runner_no = rs.runner_no'
@@ -258,7 +270,17 @@ def winning_box():
         for row in rows:
             print row
 
-        header = 'box_no,no_races,no_wins,total_payout,avg_num_races_between_wins,'
+        keys = ""
+        values = ""
+        for key, value in sorted(FILTERS["winning_box"].iteritems()):
+            keys += key + ","
+            values += value + ","
+
+        keys = keys[:-1] + "\n"
+        values = values[:-1] + "\n"
+        header = keys + values
+
+        header += 'box_no,no_races,no_wins,total_payout,avg_num_races_between_wins,'
         header += 'avg_win_payout,expected_value\n'
 
         write_to_csv_file("winning_box.csv", header, rows)
