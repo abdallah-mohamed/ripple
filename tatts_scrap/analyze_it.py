@@ -195,7 +195,9 @@ def winning_box():
         sql_stmt_part1 = 'CREATE VIEW winning_box AS select rr.box_no,'
         sql_stmt_part1 += ' (select count(rr2.race_id) from race_runners rr2'
         sql_stmt_part1 += ' inner join race r on r.race_id = rr2.race_id'
-        sql_stmt_part1 += ' where rr2.scratched = 0 and rr2.box_no = rr.box_no'
+        sql_stmt_part1 += ' inner join race_results rs2 on rr2.race_id = rs2.race_id and'
+        sql_stmt_part1 += ' rr2.runner_no = rs2.runner_no'
+        sql_stmt_part1 += ' where rr2.scratched = 0 and rr2.box_no = rr.box_no and rs2.pool_type = "WW"'
 
         sql_stmt_part2 = ' group by rr2.box_no) as no_races,'
         sql_stmt_part2 += ' count(r.race_id) as no_wins,'
@@ -203,10 +205,9 @@ def winning_box():
         sql_stmt_part2 += ' from race_runners rr'
         sql_stmt_part2 += ' inner join race_results rs on rr.race_id = rs.race_id and'
         sql_stmt_part2 += ' rr.runner_no = rs.runner_no'
-        sql_stmt_part2 += ' inner join race_pools rp on rr.race_id = rp.race_id'
         sql_stmt_part2 += ' inner join race r on rr.race_id = r.race_id'
         sql_stmt_part2 += ' where  rs.place_no = 1 and rs.pool_type = "WW" and'
-        sql_stmt_part2 += ' rp.pool_type = "WW" and rr.scratched = 0'
+        sql_stmt_part2 += ' rr.scratched = 0'
 
         if filters_exist:
             print "consolidating filters"
@@ -240,11 +241,6 @@ def winning_box():
                 sql_stmt_part1 += added_sql
                 sql_stmt_part2 += added_sql
 
-            if FILTERS["winning_box"]["win_pool_size_gt"] != "N/A":
-                added_sql = ' and rp.win_pool_size >= "%s"' % FILTERS["winning_pool"]["win_pool_size_gt"]
-                sql_stmt_part1 += added_sql
-                sql_stmt_part2 += added_sql
-
 
         sql_stmt_part2 += ' group by  rr.box_no'
         sql_stmt = sql_stmt_part1 + sql_stmt_part2
@@ -257,6 +253,13 @@ def winning_box():
         sql_stmt += ' (no_races*1.0/no_wins) as avg_num_races_between_wins,'
         sql_stmt += ' (win_pool_size*1.0/no_wins) avg_win_payout'
         sql_stmt += ' from winning_box'
+        sql_stmt += ' Where 1'
+
+        if filters_exist:
+            if FILTERS["winning_box"]["win_pool_size_gt"] != "N/A":
+                added_sql = ' and win_pool_size >= %s' % FILTERS["winning_box"]["win_pool_size_gt"]
+                sql_stmt += added_sql
+
         print "Executing sql: %s" % sql_stmt
         c.execute(sql_stmt)
 
