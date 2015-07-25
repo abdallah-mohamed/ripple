@@ -201,7 +201,7 @@ def winning_box():
 
         sql_stmt_part2 = ' group by rr2.box_no) as no_races,'
         sql_stmt_part2 += ' count(r.race_id) as no_wins,'
-        sql_stmt_part2 += ' sum(rp.pool_total) as win_pool_size'
+        sql_stmt_part2 += ' sum(rs.divid_end) as win_pool_size'
         sql_stmt_part2 += ' from race_runners rr'
         sql_stmt_part2 += ' inner join race_results rs on rr.race_id = rs.race_id and'
         sql_stmt_part2 += ' rr.runner_no = rs.runner_no'
