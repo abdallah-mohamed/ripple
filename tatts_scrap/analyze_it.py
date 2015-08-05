@@ -13,7 +13,8 @@ FILTERS = {"tipsters_performance": {"box_number": "N/A", "tipster_name": "N/A",
                                                 "tf_pool_size_gt": "N/A", "number_of_runners": "N/A"},
            "winning_box": {"venue": "N/A", "start_date": "N/A", "end_date": "N/A",
                            "distance_minimum": "N/A", "distance_maximum": "N/A",
-                           "win_pool_size_gt": "N/A", "number_of_runners": "N/A"}}
+                           "win_pool_size_gt": "N/A", "number_of_runners": "N/A",
+                           "trainer": "N/A"}}
 
 
 def validate_user_input(user_input):
@@ -245,6 +246,12 @@ def winning_box():
             if FILTERS["winning_box"]["win_pool_size_gt"] != "N/A":
                 added_sql = ' and rp.pool_total >= %s' % FILTERS["winning_box"]["win_pool_size_gt"]
                 sql_stmt_part1 += added_sql
+                sql_stmt_part2 += added_sql
+
+            if FILTERS["winning_box"]["trainer"] != "N/A":
+                added_sql = ' and rr2.trainer = "%s"' % FILTERS["winning_box"]["trainer"]
+                sql_stmt_part1 += added_sql
+                added_sql = ' and rr.trainer = "%s"' % FILTERS["winning_box"]["trainer"]
                 sql_stmt_part2 += added_sql
 
         sql_stmt_part2 += ' group by  rr.box_no'

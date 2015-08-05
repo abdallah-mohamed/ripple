@@ -1,11 +1,5 @@
-distance_maximum,distance_minimum,end_date,number_of_runners,start_date,venue,win_pool_size_gt
-1000,500,2015-07-20,N/A,2015-07-14,N/A,2500
+distance_maximum,distance_minimum,end_date,number_of_runners,start_date,trainer,venue,win_pool_size_gt
+N/A,N/A,N/A,N/A,N/A,A AZZOPARDI,N/A,N/A
 box_no,no_races,no_wins,total_payout,avg_num_races_between_wins,avg_win_payout,expected_value
-1,88,19,73.6,4.63157894737,3.87368421053,-0.163636363636
-2,88,7,28.4,12.5714285714,4.05714285714,-0.677272727273
-3,85,7,56.4,12.1428571429,8.05714285714,-0.336470588235
-4,88,8,51.5,11.0,6.4375,-0.414772727273
-5,84,9,103.6,9.33333333333,11.5111111111,0.233333333333
-6,84,9,42.3,9.33333333333,4.7,-0.496428571429
-7,89,19,194.8,4.68421052632,10.2526315789,1.18876404494
-8,83,12,72.2,6.91666666667,6.01666666667,-0.130120481928
+1,1,1,1.8,1.0,1.8,0.8
+4,2,1,2.2,2.0,2.2,0.1
