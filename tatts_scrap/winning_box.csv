@@ -1,5 +1,4 @@
 distance_maximum,distance_minimum,end_date,number_of_runners,start_date,trainer,venue,win_pool_size_gt
-N/A,N/A,N/A,N/A,N/A,A AZZOPARDI,N/A,N/A
+N/A,N/A,2015-08-05,N/A,2015-08-05,H COLLINS,N/A,N/A
 box_no,no_races,no_wins,total_payout,avg_num_races_between_wins,avg_win_payout,expected_value
-1,1,1,1.8,1.0,1.8,0.8
-4,2,1,2.2,2.0,2.2,0.1
+8,3,1,10.4,3.0,10.4,2.46666666667
