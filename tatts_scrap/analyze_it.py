@@ -18,7 +18,7 @@ FILTERS = {"tipsters_performance": {"box_number": "N/A", "tipster_name": "N/A",
            "winning_ranking": {"venue": "N/A", "start_date": "N/A", "end_date": "N/A",
                            "distance_minimum": "N/A", "distance_maximum": "N/A",
                            "win_pool_size_gt": "N/A", "number_of_runners": "N/A",
-                           "trainer": "N/A", "price_categories": "1.5,2,3,4,5,10,20,30,40,50"},
+                           "trainer": "N/A", "price_categories": "1.5-2-3-4-5-10-20-30-40-50"},
            }
 
 
@@ -202,13 +202,14 @@ def winning_ranking():
             if (FILTERS["winning_ranking"]
                 ["price_categories"] != "N/A") and len(FILTERS["winning_ranking"]
                                         ["price_categories"].split(',')) == 10:
+                print " * overriding price categories *"
                 price_categories = [float(item) for item in
                                     FILTERS["winning_ranking"]
                                     ["price_categories"].split(',')]
 
         c.execute('Drop view if Exists runners_ranking')
         sql_stmt = 'CREATE VIEW runners_ranking AS select race_id, runner_no,'
-        sql_stmt += ' scratched, win_price, '
+        sql_stmt += ' scratched, win_price, trainer,'
         sql_stmt += '  (select count (*) + 1 from race_runners rr'
         sql_stmt += ' where rr.win_price < r.win_price '
         sql_stmt += ' and rr.race_id = r.race_id ) as rank_no, '
@@ -242,82 +243,115 @@ def winning_ranking():
         print "Executing sql: %s" % sql_stmt
         c.execute(sql_stmt)
 
-#         c.execute('Drop view if Exists winning_ranking')
-# 
-#         sql_stmt_part1 = 'CREATE VIEW winning_ranking AS select rr.box_no,'
-#         
-#         sql_stmt_part1 += ' (select count (*) + 1 from race_runners rr2'
-#         sql_stmt_part1 += ' '
-#         sql_stmt_part1 += ' '
-#         sql_stmt_part1 += ' where rr2.win_price < rr.win_price and'
-#         sql_stmt_part1 += ' rr2.race_id = rr.race_id'
-#         sql_stmt_part1 += ' ) as rank_no, '
-#         sql_stmt_part1 += ' '
-#         
-#         sql_stmt_part1 += ' (select count(rr2.race_id) from race_runners rr2'
-#         sql_stmt_part1 += ' inner join race r on r.race_id = rr2.race_id'
-#         sql_stmt_part1 += ' inner join race_pools rp on rr2.race_id = rp.race_id'
-#         sql_stmt_part1 += ' where rr2.scratched = 0 and rr2.box_no = rr.box_no and'
-#         sql_stmt_part1 += ' rp.pool_type = "WW"'
-# 
-#         sql_stmt_part2 = ' group by rr2.box_no) as no_races,'
-#         sql_stmt_part2 += ' count(r.race_id) as no_wins,'
-#         sql_stmt_part2 += ' sum(rs.divid_end) as win_pool_size'
-#         sql_stmt_part2 += ' from race_runners rr'
-#         sql_stmt_part2 += ' inner join race_results rs on rr.race_id = rs.race_id and'
-#         sql_stmt_part2 += ' rr.runner_no = rs.runner_no'
-#         sql_stmt_part2 += ' inner join race r on rr.race_id = r.race_id'
-#         sql_stmt_part2 += ' inner join race_pools rp on rr.race_id = rp.race_id'
-#         sql_stmt_part2 += ' where  rs.place_no = 1 and rs.pool_type = "WW" and'
-#         sql_stmt_part2 += ' rr.scratched = 0 and rp.pool_type = "WW"'
-# 
-#         if filters_exist:
-#             print "consolidating filters"
-#             if FILTERS["winning_ranking"]["venue"] != "N/A":
-#                 added_sql = ' and r.venue_name = "%s"' % FILTERS["winning_ranking"]["venue"]
-#                 sql_stmt_part1 += added_sql
-#                 sql_stmt_part2 += added_sql
-# 
-#             if FILTERS["winning_ranking"]["start_date"] != "N/A":
-#                 added_sql = ' and r.date >= "%s"' % FILTERS["winning_ranking"]["start_date"]
-#                 sql_stmt_part1 += added_sql
-#                 sql_stmt_part2 += added_sql
-# 
-#             if FILTERS["winning_ranking"]["end_date"] != "N/A":
-#                 added_sql = ' and r.date <= "%s"' % FILTERS["winning_ranking"]["end_date"]
-#                 sql_stmt_part1 += added_sql
-#                 sql_stmt_part2 += added_sql
-# 
-#             if FILTERS["winning_ranking"]["distance_minimum"] != "N/A":
-#                 added_sql = ' and r.distance >= "%s"' % FILTERS["winning_ranking"]["distance_minimum"]
-#                 sql_stmt_part1 += added_sql
-#                 sql_stmt_part2 += added_sql
-# 
-#             if FILTERS["winning_ranking"]["distance_maximum"] != "N/A":
-#                 added_sql = ' and r.distance <= "%s"' % FILTERS["winning_ranking"]["distance_maximum"]
-#                 sql_stmt_part1 += added_sql
-#                 sql_stmt_part2 += added_sql
-# 
-#             if FILTERS["winning_ranking"]["number_of_runners"] != "N/A":
-#                 added_sql = ' and r.no_runners = "%s"' % FILTERS["winning_ranking"]["number_of_runners"]
-#                 sql_stmt_part1 += added_sql
-#                 sql_stmt_part2 += added_sql
-# 
-#             if FILTERS["winning_ranking"]["win_pool_size_gt"] != "N/A":
-#                 added_sql = ' and rp.pool_total >= %s' % FILTERS["winning_ranking"]["win_pool_size_gt"]
-#                 sql_stmt_part1 += added_sql
-#                 sql_stmt_part2 += added_sql
-# 
-#             if FILTERS["winning_ranking"]["trainer"] != "N/A":
-#                 added_sql = ' and rr2.trainer = "%s"' % FILTERS["winning_ranking"]["trainer"]
-#                 sql_stmt_part1 += added_sql
-#                 added_sql = ' and rr.trainer = "%s"' % FILTERS["winning_ranking"]["trainer"]
-#                 sql_stmt_part2 += added_sql
-# 
-#         sql_stmt_part2 += ' group by rank_no'
-#         sql_stmt = sql_stmt_part1 + sql_stmt_part2
-#         print "Executing sql: %s" % sql_stmt
-#         c.execute(sql_stmt)
+        c.execute('Drop view if Exists winning_ranking')
+
+        sql_stmt_part1 = 'CREATE VIEW winning_ranking AS select rr.rank_no, rr.price_category,'
+
+        sql_stmt_part1 += ' (select count(rr2.race_id) from runners_ranking rr2'
+        sql_stmt_part1 += ' inner join race r on r.race_id = rr2.race_id'
+        sql_stmt_part1 += ' inner join race_pools rp on rr2.race_id = rp.race_id'
+        sql_stmt_part1 += ' where rr2.scratched = 0 and rr2.rank_no = rr.rank_no and'
+        sql_stmt_part1 += ' rr2.price_category = rr.price_category and'
+        sql_stmt_part1 += ' rp.pool_type = "WW" and rr2.rank_no < 9'
+
+        sql_stmt_part2 = ' group by rr2.rank_no, price_category) as no_races,'
+        sql_stmt_part2 += ' count(r.race_id) as no_wins,'
+        sql_stmt_part2 += ' sum(rs.divid_end) as win_pool_size'
+        sql_stmt_part2 += ' from runners_ranking rr'
+        sql_stmt_part2 += ' inner join race_results rs on rr.race_id = rs.race_id and'
+        sql_stmt_part2 += ' rr.runner_no = rs.runner_no'
+        sql_stmt_part2 += ' inner join race r on rr.race_id = r.race_id'
+        sql_stmt_part2 += ' inner join race_pools rp on rr.race_id = rp.race_id'
+        sql_stmt_part2 += ' where  rs.place_no = 1 and rs.pool_type = "WW" and'
+        sql_stmt_part2 += ' rr.scratched = 0 and rp.pool_type = "WW"'
+        sql_stmt_part2 += ' and rr.rank_no < 9'
+
+        if filters_exist:
+            print "consolidating filters"
+            if FILTERS["winning_ranking"]["venue"] != "N/A":
+                added_sql = ' and r.venue_name = "%s"' % FILTERS["winning_ranking"]["venue"]
+                sql_stmt_part1 += added_sql
+                sql_stmt_part2 += added_sql
+
+            if FILTERS["winning_ranking"]["start_date"] != "N/A":
+                added_sql = ' and r.date >= "%s"' % FILTERS["winning_ranking"]["start_date"]
+                sql_stmt_part1 += added_sql
+                sql_stmt_part2 += added_sql
+
+            if FILTERS["winning_ranking"]["end_date"] != "N/A":
+                added_sql = ' and r.date <= "%s"' % FILTERS["winning_ranking"]["end_date"]
+                sql_stmt_part1 += added_sql
+                sql_stmt_part2 += added_sql
+
+            if FILTERS["winning_ranking"]["distance_minimum"] != "N/A":
+                added_sql = ' and r.distance >= "%s"' % FILTERS["winning_ranking"]["distance_minimum"]
+                sql_stmt_part1 += added_sql
+                sql_stmt_part2 += added_sql
+
+            if FILTERS["winning_ranking"]["distance_maximum"] != "N/A":
+                added_sql = ' and r.distance <= "%s"' % FILTERS["winning_ranking"]["distance_maximum"]
+                sql_stmt_part1 += added_sql
+                sql_stmt_part2 += added_sql
+
+            if FILTERS["winning_ranking"]["number_of_runners"] != "N/A":
+                added_sql = ' and r.no_runners = "%s"' % FILTERS["winning_ranking"]["number_of_runners"]
+                sql_stmt_part1 += added_sql
+                sql_stmt_part2 += added_sql
+
+            if FILTERS["winning_ranking"]["win_pool_size_gt"] != "N/A":
+                added_sql = ' and rp.pool_total >= %s' % FILTERS["winning_ranking"]["win_pool_size_gt"]
+                sql_stmt_part1 += added_sql
+                sql_stmt_part2 += added_sql
+
+            if FILTERS["winning_ranking"]["trainer"] != "N/A":
+                added_sql = ' and rr2.trainer = "%s"' % FILTERS["winning_ranking"]["trainer"]
+                sql_stmt_part1 += added_sql
+                added_sql = ' and rr.trainer = "%s"' % FILTERS["winning_ranking"]["trainer"]
+                sql_stmt_part2 += added_sql
+
+        sql_stmt_part2 += ' group by rank_no, price_category'
+        sql_stmt = sql_stmt_part1 + sql_stmt_part2
+        print "Executing sql: %s" % sql_stmt
+        c.execute(sql_stmt)
+
+        c.execute('Drop view if Exists winning_ranking_details')
+
+        sql_stmt = 'CREATE VIEW winning_ranking_details AS select *, '
+        sql_stmt += ' (no_races*1.0/no_wins) as avg_num_races_between_wins,'
+        sql_stmt += ' (win_pool_size*1.0/no_wins) avg_win_payout'
+        sql_stmt += ' from winning_ranking'
+        sql_stmt += ' Where 1'
+
+        print "Executing sql: %s" % sql_stmt
+        c.execute(sql_stmt)
+
+        c.execute('select *,'
+                  ' COALESCE( '
+                  ' (((avg_win_payout - 1)/avg_num_races_between_wins) - 1 * (1 - (1/avg_num_races_between_wins)))'
+                  ' , 0) as expected_value'
+                  ' from winning_ranking_details order by rank_no')
+
+        rows = c.fetchall()
+        for row in rows:
+            print row
+
+        keys = ""
+        values = ""
+        for key, value in sorted(FILTERS["winning_ranking"].iteritems()):
+            keys += key + ","
+            if key == "price_categories":
+                values += "-".join(str(item) for item in price_categories) + ","
+            else:
+                values += value + ","
+
+        keys = keys[:-1] + "\n"
+        values = values[:-1] + "\n"
+        header = keys + values
+
+        header += 'rank_no,price_category,no_races,no_wins,total_payout,avg_num_races_between_wins,'
+        header += 'avg_win_payout,expected_value\n'
+
+        write_to_csv_file("winning_ranking.csv", header, rows)
 
     finally:
         conn.commit()
