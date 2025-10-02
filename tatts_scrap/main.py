@@ -3,9 +3,11 @@ from datetime import datetime, timedelta
 import sqlite3
 from xml.dom.minidom import parseString
 import time
+from sqlite_db import SQLITE_DB, create_db_schema
+import os
 
 
-def get_racing_info_by_day(day):
+def get_save_racing_info_by_day(day, conn):
     """
     Collect the racing info for specific day
     """
@@ -42,6 +44,26 @@ def get_racing_info_by_day(day):
             weather = race.getAttribute("WeatherDesc")
             distance = race.getAttribute("Distance")
             track = race.getAttribute("TrackDesc")
+            race_id = "-".join([year, month, day, meeting_code, race_no])
+
+            c = conn.cursor()
+
+            def race_in_db(race_id):
+                """
+                Check if race is already in db
+                """
+                c.execute('SELECT race_id FROM race WHERE race_id = "%s"' % race_id)
+                id_exists = c.fetchone()
+                return id_exists
+
+            if race_in_db(race_id):
+                print "Skip race [%s] as its data is already in db" % race_id
+                continue
+
+            # Save race info to db.
+            c.execute('INSERT INTO race VALUES("%s", "%s", "%s", "%s", "%s")' %
+                      (race_id, venue_name, weather, distance, track))
+
             # https://tatts.com/pagedata/racing/2015/7/10/BG1.xml
             race_url = "https://tatts.com/pagedata/racing/" + "/".join([year, month, day,
                                                                         meeting_code +
@@ -65,6 +87,10 @@ def get_racing_info_by_day(day):
                 print "Tipster Id \t Tipster Tips \t Tipster Name"
                 print "%s \t \t %s \t %s" % (tipster_id, tipster_tips, tipster_name)
 
+                # Save tipsters to db
+                c.execute('INSERT INTO race_tipsters VALUES("%s", "%s", "%s", "%s")' %
+                          (race_id, tipster_id, tipster_name, tipster_tips))
+
             runners = race_dom.getElementsByTagName("Runner")
             for runner in runners:
                 runner_no = runner.getAttribute("RunnerNo")
@@ -80,6 +106,12 @@ def get_racing_info_by_day(day):
                                                                         runner_name, scratched,
                                                                         trainer, win_price,
                                                                         place_price)
+
+                # Save Runners to db
+                c.execute('INSERT INTO race_runners VALUES("%s", "%s", "%s", "%s", "%s",'
+                          ' "%s", "%s", "%s")' %
+                          (race_id, runner_no, runner_name, box_no, 1 if scratched == 'Y' else 0,
+                           trainer, win_price, place_price))
 
             result_places = race_dom.getElementsByTagName("ResultPlace")
             for result_place in result_places:
@@ -100,6 +132,10 @@ def get_racing_info_by_day(day):
                         print "%s \t \t \t %s \t \t \t %s \t \t %s" % (place_no, runner_no,
                                                            pool_type, divid_end)
 
+                    # Save Race Results to db
+                    c.execute('INSERT INTO race_results VALUES("%s", "%s", "%s", "%s", "%s")' %
+                              (race_id, place_no, runner_no, pool_type, divid_end))
+
             pools = race_dom.getElementsByTagName("Pool")
             print "---POOLS---"
             for pool in pools:
@@ -108,27 +144,53 @@ def get_racing_info_by_day(day):
                 print "Pool Type \t \t Pool total"
                 print "%s \t \t \t \t %s $" % (pool_type, pool_total)
                 divid_ends = pool.getElementsByTagName("Dividend")
+
+                # Save Race Pools to db
+                c.execute('INSERT INTO race_pools VALUES("%s", "%s", "%s")' %
+                          (race_id, pool_type, pool_total))
+
                 for divid_end in divid_ends:
                     div_amount = divid_end.getAttribute("DivAmount")
                     print "\t Div amount = %s" % div_amount
                     div_results = divid_end.getElementsByTagName("DivResult")
+                    runners_place_list = []
                     for div_result in div_results:
                         leg_no = div_result.getAttribute("LegNo")
                         div_result_runner_no = div_result.getAttribute("RunnerNo")
+                        runners_place_list.insert(int(leg_no) - 1, div_result_runner_no)
                         print "\t \t Leg No \t Runner No"
                         print "\t \t %s \t \t %s" % (leg_no, div_result_runner_no)
-            time.sleep(1)
+
+                    # Save Race Pool Details to db
+                    c.execute('INSERT INTO pool_details VALUES("%s", "%s", "%s", "%s")' %
+                              (race_id, pool_type, div_amount, '-'.join(runners_place_list)))
+
             print "************* End Race info ****************"
+
+            conn.commit()
+
+            #TODO: We could add an index table to keep track of last scrubbed date
+            # so we start scraping from the next day.
+
+            # Sleep to avoid hammering on the site
+            time.sleep(0.5)
 
 
 def scrap_tatts_by_date(from_date, to_date):
     """
     Scrap tatts website for greyhound races for specific date ranges
     """
-    while from_date <= to_date:
-        print "########## Scraping greyhounds racing info. for day %s ##########" % from_date
-        get_racing_info_by_day(from_date)
-        from_date = from_date + timedelta(hours=24)
+    if not os.path.isfile(SQLITE_DB):
+        create_db_schema()
+
+    try:
+        conn = sqlite3.connect(SQLITE_DB)
+        while from_date <= to_date:
+            print "########## Scraping greyhounds racing info. for day %s ##########" % from_date
+            get_save_racing_info_by_day(from_date, conn)
+            from_date = from_date + timedelta(hours=24)
+    finally:
+        conn.close()
 
 
 def scrap_tatts():
